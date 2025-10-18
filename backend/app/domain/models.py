@@ -94,9 +94,6 @@ class Message(Base):
     role: Mapped[Optional[str]] = mapped_column(String)
     content_text: Mapped[Optional[str]] = mapped_column(Text)
     render_payload: Mapped[Optional[list]] = mapped_column(JSONB)  # Array of UI chunks
-    reply_to_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
-    moderation: Mapped[Optional[dict]] = mapped_column(JSONB)
-    token_usage: Mapped[Optional[int]] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=text("now()")
     )
