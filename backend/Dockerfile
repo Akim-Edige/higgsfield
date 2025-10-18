@@ -8,15 +8,20 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем зависимости из backend и устанавливаем их
+# Копируем файл зависимостей из backend/
 COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Копируем всё содержимое backend/
+# Копируем всё приложение
 COPY backend/ /app/
 
-# Делаем start.sh исполняемым
+# Делаем стартовый скрипт исполняемым
 RUN chmod +x /app/start.sh
+
+# Переменные окружения по умолчанию
+ENV PYTHONPATH=/app
+ENV DB_DSN=${DB_DSN}
+ENV APP_DEBUG=false
 
 EXPOSE 8000
 
