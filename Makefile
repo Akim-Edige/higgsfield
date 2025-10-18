@@ -14,24 +14,24 @@ help:
 	@echo "clean           - Remove cache and temp files"
 
 dev-up:
-	docker compose up -d --build
+	cd backend && docker compose up -d --build
 	@echo "Waiting for services to be ready..."
 	@sleep 5
 	@make migrate
 
 dev-down:
-	docker compose down
+	cd backend && docker compose down
 
 rebuild:
-	docker compose down
-	docker compose build --no-cache
-	docker compose up -d
+	cd backend && docker compose down
+	cd backend && docker compose build --no-cache
+	cd backend && docker compose up -d
 	@echo "Waiting for services to be ready..."
 	@sleep 5
 	@make migrate
 
 migrate:
-	docker compose exec -T api alembic upgrade head
+	cd backend && docker compose exec -T api alembic upgrade head
 
 migrate-create:
 	cd backend && alembic revision --autogenerate -m "$(MSG)"

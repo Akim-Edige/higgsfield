@@ -4,11 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import attachments, chats, health, jobs, messages, options, sse
+from app.api.routes import attachments, chats, health, messages, options
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.infra.db import engine
-from app.infra.redis import close_redis
 
 from app.api.higgsfield import text2image, text2video, misc, image2video, generate
 
@@ -25,7 +24,6 @@ async def lifespan(app: FastAPI):
     logger.info("shutting_down_application")
     # Close connections
     await engine.dispose()
-    await close_redis()
 
 
 # Create FastAPI app
@@ -50,9 +48,7 @@ app.include_router(health.router)
 app.include_router(chats.router)
 app.include_router(messages.router)
 app.include_router(options.router)
-app.include_router(jobs.router)
 app.include_router(attachments.router)
-app.include_router(sse.router)
 app.include_router(text2image.router)
 app.include_router(text2video.router)
 app.include_router(image2video.router)
