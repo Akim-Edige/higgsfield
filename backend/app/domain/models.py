@@ -47,10 +47,6 @@ class User(Base):
     # Relationships
     chats: Mapped[list["Chat"]] = relationship("Chat", back_populates="user")
     attachments: Mapped[list["Attachment"]] = relationship("Attachment", back_populates="user")
-    generation_jobs: Mapped[list["GenerationJob"]] = relationship(
-        "GenerationJob", back_populates="user"
-    )
-
 
 class Chat(Base):
     """Chat model."""
@@ -174,61 +170,3 @@ class Option(Base):
 
     # Relationships
     message: Mapped["Message"] = relationship("Message", back_populates="options")
-    generation_jobs: Mapped[list["GenerationJob"]] = relationship(
-        "GenerationJob", back_populates="option"
-    )
-
-
-class GenerationJob(Base):
-    """Generation job model - tracks async generation jobs."""
-
-    __tablename__ = "generation_jobs"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    option_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("options.id"), nullable=False, index=True
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    idempotency_key: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String, nullable=False, default="PENDING", index=True
-    )  # PENDING, RUNNING, SUCCEEDED, FAILED, TIMEOUT, CANCELED
-    provider: Mapped[str] = mapped_column(String, default="higgsfield")
-    provider_job_set_id: Mapped[Optional[str]] = mapped_column(Text, unique=True, index=True)
-    progress: Mapped[Optional[int]] = mapped_column(SmallInteger)
-    attempts: Mapped[int] = mapped_column(Integer, default=0)
-    last_error_code: Mapped[Optional[str]] = mapped_column(Text)
-    last_error_message: Mapped[Optional[str]] = mapped_column(Text)
-    last_polled_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
-    next_poll_at: Mapped[Optional[datetime]] = mapped_column(
-        TIMESTAMP(timezone=True), index=True
-    )
-    timeout_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
-    started_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
-    finished_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
-    output_urls: Mapped[Optional[dict]] = mapped_column(JSONB)  # {min_url, raw_url, type}
-    output_meta: Mapped[Optional[dict]] = mapped_column(JSONB)  # {width, height, duration_ms, etc.}
-    trace_id: Mapped[Optional[str]] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), server_default=text("now()")
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True), server_default=text("now()"), onupdate=datetime.utcnow
-    )
-
-    # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="generation_jobs")
-    option: Mapped["Option"] = relationship("Option", back_populates="generation_jobs")
-
-    __table_args__ = (
-        Index("ix_jobs_user_option_idem", "user_id", "option_id", "idempotency_key", unique=True),
-        Index("ix_jobs_provider_job_set_id", "provider_job_set_id", unique=True),
-        Index("ix_jobs_status_updated", "status", "updated_at"),
-        Index(
-            "ix_jobs_next_poll",
-            "next_poll_at",
-            postgresql_where=text("status IN ('PENDING', 'RUNNING')"),
-        ),
-        Index("ix_jobs_option", "option_id"),
-    )
-
