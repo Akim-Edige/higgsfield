@@ -10,7 +10,7 @@ from app.core.logging import configure_logging, get_logger
 from app.infra.db import engine
 from app.infra.redis import close_redis
 
-from app.api.higgsfield import text2image, text2video, misc, image2video
+from app.api.higgsfield import text2image, text2video, misc, image2video, generate
 
 # Configure logging
 configure_logging(debug=settings.APP_DEBUG)
@@ -57,6 +57,7 @@ app.include_router(text2image.router)
 app.include_router(text2video.router)
 app.include_router(image2video.router)
 app.include_router(misc.router)
+app.include_router(generate.router)  # Универсальный эндпоинт генерации
 
 
 @app.get("/")

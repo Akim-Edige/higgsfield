@@ -160,18 +160,13 @@ class Option(Base):
     message_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("messages.id"), nullable=False, index=True
     )
-    rank: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     tool_type: Mapped[str] = mapped_column(
         String, nullable=False
-    )  # 'text_to_image', 'text_to_video', etc.
+    )  # 'text_to_image', 'image_to_video', etc.
+    style_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)  # Style or motion ID
     model_key: Mapped[str] = mapped_column(Text, nullable=False, index=True)
-    parameters: Mapped[dict] = mapped_column(JSONB, nullable=False)
     enhanced_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
-    confidence: Mapped[Optional[float]] = mapped_column(Numeric)
-    est_cost: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 6))
-    est_latency_ms: Mapped[Optional[int]] = mapped_column(Integer)
-    requires_attachment: Mapped[bool] = mapped_column(Boolean, default=False)
     result_url: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=text("now()")
@@ -181,11 +176,6 @@ class Option(Base):
     message: Mapped["Message"] = relationship("Message", back_populates="options")
     generation_jobs: Mapped[list["GenerationJob"]] = relationship(
         "GenerationJob", back_populates="option"
-    )
-
-    __table_args__ = (
-        Index("ix_options_message_rank", "message_id", "rank", unique=True),
-        Index("ix_options_model_key", "model_key"),
     )
 
 

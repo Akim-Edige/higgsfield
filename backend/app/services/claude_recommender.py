@@ -289,20 +289,16 @@ async def create_option_in_background(
         # Enhance prompt
         enhanced_prompt = await enhance_prompt_with_claude(user_prompt, style_description)
         
-        # Create Option in database WITH explanation
+        # Create Option in database
         option = Option(
             id=uuid.uuid4(),
             message_id=message_id,
-            rank=0,  # Will be updated later with proper rank
             tool_type=model_type.replace('-', '_'),
+            style_id=style_id,  # Actual style/motion UUID from JSON
             model_key="higgsfield_default",  # TODO: Map to actual model
-            parameters={},  # TODO: Add style-specific parameters
             enhanced_prompt=enhanced_prompt,
-            reason=explanation if explanation else f"Selected {style_name} style",  # Use explanation or meaningful default
-            confidence=0.9,
-            est_cost=None,
-            est_latency_ms=None,
-            requires_attachment=False,
+            reason=explanation if explanation else f"Selected {style_name} style",
+            result_url=None,  # Will be set after generation completes
         )
         
         db.add(option)
@@ -577,7 +573,6 @@ class ClaudeRecommender:
                     
                     if option:
                         option.reason = explanation
-                        option.rank = idx
                         await db.flush()
                     
                     # Add explanation to result for return value

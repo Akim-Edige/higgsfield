@@ -100,23 +100,18 @@ def upgrade() -> None:
         'options',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('message_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('rank', sa.SmallInteger(), nullable=False),
         sa.Column('tool_type', sa.String(), nullable=False),
+        sa.Column('style_id', sa.Text(), nullable=False),
         sa.Column('model_key', sa.Text(), nullable=False),
-        sa.Column('parameters', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column('enhanced_prompt', sa.Text(), nullable=False),
         sa.Column('reason', sa.Text(), nullable=False),
-        sa.Column('confidence', sa.Numeric(), nullable=True),
-        sa.Column('est_cost', sa.Numeric(precision=12, scale=6), nullable=True),
-        sa.Column('est_latency_ms', sa.Integer(), nullable=True),
-        sa.Column('requires_attachment', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('result_url', sa.Text(), nullable=True),
         sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_options_message_id', 'options', ['message_id'])
-    op.create_index('ix_options_message_rank', 'options', ['message_id', 'rank'], unique=True)
     op.create_index('ix_options_model_key', 'options', ['model_key'])
+    op.create_index('ix_options_style_id', 'options', ['style_id'])
 
     # Create generation_jobs table
     op.create_table(

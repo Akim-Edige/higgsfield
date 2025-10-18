@@ -128,9 +128,16 @@ async def _poll_generation_async(job_id: str) -> None:
                 job.started_at = now
                 job.attempts += 1
 
+                # Формируем параметры из option
+                parameters = {
+                    "style_id": option.style_id,
+                    "aspect_ratio": "16:9",  # можно добавить в Option если нужно
+                    "quality": "1080p",
+                }
+                
                 provider_job_set_id = await provider.start_generation(
                     model_key=option.model_key,
-                    parameters=option.parameters,
+                    parameters=parameters,
                     prompt=option.enhanced_prompt,
                 )
 
