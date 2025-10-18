@@ -242,7 +242,7 @@ async def generate_style_explanation(
     Generate explanation why this style was chosen for the user's request
     EXACT COPY from claude_agent.py
     """
-    explanation_prompt = f"""Explain why this style matches the user's request.
+    explanation_prompt = f"""Explain why this style matches the user's request in 2-3 sentences.
 
 User's request: {user_request}
 Style: {style_name}
