@@ -10,6 +10,8 @@ from app.core.logging import configure_logging, get_logger
 from app.infra.db import engine
 from app.infra.redis import close_redis
 
+from app.api.higgsfield import text2image, text2video, misc, image2video
+
 # Configure logging
 configure_logging(debug=settings.APP_DEBUG)
 logger = get_logger(__name__)
@@ -51,6 +53,10 @@ app.include_router(options.router)
 app.include_router(jobs.router)
 app.include_router(attachments.router)
 app.include_router(sse.router)
+app.include_router(text2image.router)
+app.include_router(text2video.router)
+app.include_router(image2video.router)
+app.include_router(misc.router)
 
 
 @app.get("/")
