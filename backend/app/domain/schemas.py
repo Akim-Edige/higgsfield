@@ -117,17 +117,13 @@ class OptionOut(BaseModel):
 
     id: UUID
     message_id: UUID
-    rank: int
     tool_type: str
+    style_id: str
     model_key: str
-    parameters: dict[str, Any]
     enhanced_prompt: str
     reason: str
-    confidence: float | None
-    est_cost: Decimal | None
-    est_latency_ms: int | None
-    requires_attachment: bool
     result_url: str | None
+    created_at: datetime
 
     class Config:
         from_attributes = True

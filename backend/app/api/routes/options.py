@@ -19,7 +19,7 @@ async def get_message_options(
     db: AsyncSession = Depends(get_db_dep),
 ) -> list[OptionOut]:
     """Get all options for a message."""
-    stmt = select(Option).where(Option.message_id == message_id).order_by(Option.rank)
+    stmt = select(Option).where(Option.message_id == message_id).order_by(Option.created_at)
     result = await db.execute(stmt)
     options = result.scalars().all()
 

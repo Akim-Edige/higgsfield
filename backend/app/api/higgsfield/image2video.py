@@ -38,6 +38,7 @@ class Image2VideoParams(BaseModel):
     motions: Optional[List[MotionRef]] = None
     input_image: ImageReference
     enhance_prompt: bool = True
+    model_name: Optional[str] = "veo3"  # Название модели для эндпоинта
 
 class Image2VideoRequest(BaseModel):
     webhook: Optional[Webhook] = None
@@ -72,7 +73,7 @@ async def generate_image2video(request: Image2VideoRequest):
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{HIGGSFIELD_BASE_URL}/image2video/veo3",
+            f"{HIGGSFIELD_BASE_URL}/image2video/{params.model_name}",
             headers=headers,
             json=request.dict(),
         )

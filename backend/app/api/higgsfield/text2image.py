@@ -31,6 +31,7 @@ class Params(BaseModel):
     quality: Optional[str] = "1080p"
     style_strength: Optional[float] = 1.0
     seed: Optional[int] = None
+    model_name: Optional[str] = "nano-banana"  # Название модели
 
 class GenerateRequest(BaseModel):
     webhook: Optional[Dict[str, str]] = None
@@ -52,7 +53,7 @@ async def generate_image(request: Optional[GenerateRequest] = None):
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{HIGGSFIELD_BASE_URL}/text2image/nano-banana",
+            f"{HIGGSFIELD_BASE_URL}/text2image/{request.params.model_name}",
             headers=headers,
             json=request.dict()
         )

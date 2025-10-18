@@ -22,6 +22,7 @@ class VideoParams(BaseModel):
     duration: int = 5
     resolution: str = "720"
     camera_fixed: bool = False
+    model_name: Optional[str] = "seedance-v1-lite-t2v"  # Название модели
 
 class GenerateVideoRequest(BaseModel):
     params: VideoParams = VideoParams()
@@ -43,7 +44,7 @@ async def generate_video(request: Optional[GenerateVideoRequest] = None):
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{HIGGSFIELD_BASE_URL}/generate/seedance-v1-lite-t2v",
+            f"{HIGGSFIELD_BASE_URL}/generate/{request.params.model_name}",
             headers=headers,
             json=request.dict()
         )
