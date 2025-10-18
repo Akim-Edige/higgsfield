@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
 
 from app.api.deps import get_current_user_id_dep, get_db_dep
 from app.core.logging import get_logger
@@ -103,8 +104,9 @@ async def create_message(
         logger.info("user_message_created", message_id=str(user_msg.id), chat_id=str(chat_id))
 
     # Create assistant message first (will be updated with render_payload)
+    # Ensure assistant message is slightly later to avoid identical timestamps
     assistant_msg = await ChatService.create_message(
-        db, chat_id, AuthorType.ASSISTANT.value
+        db, chat_id, AuthorType.ASSISTANT.value, created_at=datetime.utcnow()
     )
     await db.flush()
     logger.info("assistant_message_created", message_id=str(assistant_msg.id), chat_id=str(chat_id))

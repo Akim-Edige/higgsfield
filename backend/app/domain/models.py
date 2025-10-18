@@ -137,8 +137,7 @@ class Attachment(Base):
 
     __table_args__ = (
         Index("ix_attachments_message", "message_id"),
-        Index("ix_attachments_chat_created", "chat_id", "created_at"),
-        Index("ix_attachments_sha256", "sha256"),
+        Index("ix_attachments_chat_created", "chat_id", "created_at")
     )
 
 
