@@ -1,0 +1,10 @@
+{
+  "rootDirectory": "backend",
+  "build": {
+    "builder": "railpack"
+  },
+  "deploy": {
+    "startCommand": "/start.sh",
+    "port": 8000
+  }
+}
