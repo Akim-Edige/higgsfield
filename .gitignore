@@ -74,3 +74,4 @@ htmlcov/
 *.temp
 tmp/
 temp/
+test/

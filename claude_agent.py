@@ -11,10 +11,10 @@ import os
 
 import anthropic
 from sqlalchemy.orm import Session
-
+from dotenv import load_dotenv
 from models import Option, Message
 from base import get_db
-
+load_dotenv()
 # Get API key from environment
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 if not ANTHROPIC_API_KEY:
@@ -174,12 +174,49 @@ async def enhance_prompt_with_claude(user_prompt: str, style_description: str) -
     """
     Enhances user's prompt using Claude with style description
     """
-    enhancement_prompt = f"""Enhance the following prompt for image/video generation.
-Original prompt: {user_prompt}
-Style: {style_description}
+    enhancement_prompt = f"""You are an expert prompt engineer specializing in creating hyper-detailed, photorealistic image generation prompts.
 
-Create a detailed, enhanced prompt in English that preserves the user's core idea 
-but adds details matching the selected style. Return only the enhanced prompt without additional explanations."""
+Transform the user's basic request into a professional, cinematic prompt following these principles:
+
+**CORE ELEMENTS TO INCLUDE:**
+
+1. **Subject & Composition:**
+   - Detailed physical description (ethnicity, age, features, expression, gaze direction)
+   - Precise posture, positioning, and body language
+   - Clothing with fabric textures, cuts, details (silk fibers, raw-edge denim, weave patterns)
+   - Camera angle and framing (eye-level, 50mm focal balance, center framing, etc.)
+
+2. **Lighting & Atmosphere:**
+   - Light source type and direction (harsh key from above, golden fill, soft daylight)
+   - Shadow quality and placement (deep chiaroscuro, pooling shadows, nuanced shadows)
+   - Reflections and highlights on surfaces (glossed skin, dappled gleams, metallic surfaces)
+   - Overall mood and color temperature (warm/cool tones, muted palette)
+
+3. **Environment & Setting:**
+   - Specific location details (jagged stones, glass skyscrapers, airport terminal)
+   - Background elements and their textures
+   - Spatial relationship between subject and environment
+   - Depth of field and focus areas (crisp focus center, gentle vignette blur)
+
+4. **Technical & Textural Details:**
+   - Fabric textures (thread weaves, fraying, distressed patterns)
+   - Skin details (freckles, subtle highlights, pores)
+   - Material properties (reflective glass, polished metal, rough indigo)
+   - Digital clarity level (film-like stillness, tactile grit, hyper-real fidelity)
+
+5. **Style-Specific Touches:**
+   - Integrate the style characteristics naturally: {style_description}
+   - Maintain spontaneous/candid feel if appropriate
+   - Balance sharpness with subtle softness where needed
+   - Create contrast between elements (urban-wild, structured-natural)
+
+**USER'S ORIGINAL REQUEST:**
+{user_prompt}
+
+**YOUR TASK:**
+Transform this into a 150-300 word professional prompt that reads like a cinematographer's detailed shot description. Use vivid, precise language. Include specific measurements, materials, angles, and atmospheric qualities. Make it feel tangible and real.
+
+Return ONLY the enhanced prompt - no explanations, no meta-commentary, just the final prompt."""
 
     message = await claude_client.messages.create(
         model="claude-3-5-haiku-20241022",
