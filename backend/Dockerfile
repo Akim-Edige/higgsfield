@@ -5,28 +5,26 @@ WORKDIR /app
 # Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
     gcc \
-    postgresql \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем зависимости
+# Копируем зависимости и устанавливаем Python-зависимости
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем код проекта
+# Копируем код приложения
 COPY . .
 
-# Настройка базы данных
-RUN mkdir -p /var/lib/postgresql/data && chown -R postgres:postgres /var/lib/postgresql
-USER postgres
-RUN /usr/lib/postgresql/*/bin/initdb -D /var/lib/postgresql/data
-USER root
-
-COPY start.sh /start.sh
+# Копируем start.sh из корня проекта (уровень выше backend)
+COPY ../start.sh /start.sh
 RUN chmod +x /start.sh
 
-ENV DB_DSN=postgresql+asyncpg://postgres:postgres@localhost:5432/app
+# Открываем порт
+EXPOSE 8000
+
+# Переменные окружения
+ENV DB_DSN=postgresql+asyncpg://postgres:postgres@postgres:5432/app
 ENV APP_DEBUG=false
 
-EXPOSE 8000
+# Запуск приложения
 CMD ["/start.sh"]
