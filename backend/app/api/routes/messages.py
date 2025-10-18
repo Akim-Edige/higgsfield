@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id_dep, get_db_dep
+from app.core.logging import get_logger
 from app.domain.models import Chat, Message, Option
 from app.domain.pagination import encode_cursor
 from app.domain.schemas import (
@@ -24,6 +25,7 @@ from app.services.claude_recommender import ClaudeRecommender
 from app.services.response_parser import parse_claude_options_list
 
 router = APIRouter(tags=["messages"])
+logger = get_logger(__name__)
 
 
 @router.get("/chats/{chat_id}/messages", response_model=PaginatedResponse)
@@ -51,6 +53,13 @@ async def list_messages(
 
     result = await db.execute(stmt)
     messages = result.scalars().all()
+    
+    logger.info(
+        "list_messages_query",
+        chat_id=str(chat_id),
+        found_count=len(messages),
+        message_ids=[str(m.id) for m in messages],
+    )
 
     has_more = len(messages) > limit
     items = list(reversed(messages[:limit]))  # Reverse to show oldest first
@@ -85,15 +94,20 @@ async def create_message(
         raise HTTPException(status_code=404, detail="Chat not found")
 
     # Create user message (if text provided)
+    user_msg = None
     if data.text:
         user_msg = await ChatService.create_message(
             db, chat_id, AuthorType.USER.value, content_text=data.text
         )
+        await db.flush()
+        logger.info("user_message_created", message_id=str(user_msg.id), chat_id=str(chat_id))
 
     # Create assistant message first (will be updated with render_payload)
     assistant_msg = await ChatService.create_message(
         db, chat_id, AuthorType.ASSISTANT.value
     )
+    await db.flush()
+    logger.info("assistant_message_created", message_id=str(assistant_msg.id), chat_id=str(chat_id))
 
     # Generate options using Claude LLM
     has_attachment = bool(data.attachments)
@@ -120,8 +134,19 @@ async def create_message(
 
     # Update assistant message with final render_payload
     assistant_msg.render_payload = render_payload
-
+    
+    # Flush to ensure data is in transaction
+    await db.flush()
+    
+    # IMPORTANT: Explicit commit to ensure data is persisted
     await db.commit()
+    
+    logger.info(
+        "messages_committed_to_db", 
+        chat_id=str(chat_id), 
+        user_msg_id=str(user_msg.id) if user_msg else None,
+        assistant_msg_id=str(assistant_msg.id)
+    )
 
     return MessageWithOptions(
         message=MessageOut.model_validate(assistant_msg)

@@ -20,7 +20,7 @@ AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
-    autoflush=False,
+    autoflush=True,
     autocommit=False,
 )
 
@@ -30,7 +30,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
-            await session.commit()
+            # Only commit if transaction is still active
+            if session.in_transaction():
+                await session.commit()
         except Exception:
             await session.rollback()
             raise
