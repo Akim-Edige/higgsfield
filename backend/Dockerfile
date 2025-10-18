@@ -8,23 +8,16 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем зависимости и устанавливаем Python-зависимости
+# Копируем зависимости и устанавливаем пакеты
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем код приложения
+# Копируем весь код приложения
 COPY . .
 
-# Копируем start.sh из корня проекта (уровень выше backend)
-COPY ../start.sh /start.sh
-RUN chmod +x /start.sh
+# Даём права на запуск start.sh
+RUN chmod +x /app/start.sh
 
-# Открываем порт
 EXPOSE 8000
 
-# Переменные окружения
-ENV DB_DSN=postgresql+asyncpg://postgres:postgres@postgres:5432/app
-ENV APP_DEBUG=false
-
-# Запуск приложения
-CMD ["/start.sh"]
+CMD ["/app/start.sh"]
