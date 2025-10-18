@@ -5,9 +5,12 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 
+from app.core.config import settings
+
 HIGGSFIELD_BASE_URL = "https://platform.higgsfield.ai/v1"
-HF_API_KEY = os.getenv("HF_API_KEY", "782be287-7c12-4e39-bdde-879b28fe3a5d")
-HF_SECRET = os.getenv("HF_SECRET", "76afa0e573c958ee271f9781f3152c0ad5911b5ce7e42d3b5beffef0861f4508")
+HF_API_KEY = settings.HIGGSFIELD_API_KEY
+
+HF_SECRET =  settings.HIGGSFIELD_SECRET
 
 router = APIRouter(prefix="/higgsfield", tags=["higgsfield:misc"])
 
