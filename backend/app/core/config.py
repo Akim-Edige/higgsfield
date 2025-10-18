@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     I2V_TIMEOUT_S: int = Field(default=1200, description="Image-to-video timeout in seconds")
     T2V_TIMEOUT_S: int = Field(default=1200, description="Text-to-video timeout in seconds")
 
-    # S3 / LocalStack / Yandex Cloud
+    # S3 / Yandex Cloud / AWS S3
     S3_BUCKET: str = Field(default="media", description="S3 bucket name")
     S3_REGION: str = Field(default="ru-central1", description="S3 region")
     S3_USE_PATH_STYLE: bool = Field(default=False, description="Use path-style S3 URLs")

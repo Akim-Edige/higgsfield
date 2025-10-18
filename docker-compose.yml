@@ -27,25 +27,6 @@ services:
       timeout: 3s
       retries: 5
 
-  localstack:
-    image: localstack/localstack:latest
-    ports:
-      - "4566:4566"
-    environment:
-      SERVICES: s3
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      DEBUG: 1
-    volumes:
-      - ./init/localstack:/etc/localstack/init/ready.d
-      - localstack_data:/var/lib/localstack
-    healthcheck:
-      test: ["CMD", "awslocal", "s3", "ls"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   api:
     build:
       context: .
@@ -57,11 +38,11 @@ services:
     environment:
       DB_DSN: postgresql+asyncpg://postgres:postgres@postgres:5432/app
       REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT_INTERNAL: ${S3_ENDPOINT_INTERNAL:-http://localstack:4566}
-      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:4566}
+      S3_ENDPOINT_INTERNAL: ${S3_ENDPOINT_INTERNAL:-https://storage.yandexcloud.net}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-https://storage.yandexcloud.net}
       S3_BUCKET: ${S3_BUCKET:-media}
-      S3_REGION: ${S3_REGION:-us-east-1}
-      S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-true}
+      S3_REGION: ${S3_REGION:-ru-central1}
+      S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-false}
       USE_PUBLIC_URLS: ${USE_PUBLIC_URLS:-true}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
@@ -78,8 +59,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      localstack:
-        condition: service_healthy
 
   worker:
     build:
@@ -90,11 +69,11 @@ services:
     environment:
       DB_DSN: postgresql+asyncpg://postgres:postgres@postgres:5432/app
       REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT_INTERNAL: ${S3_ENDPOINT_INTERNAL:-http://localstack:4566}
-      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:4566}
+      S3_ENDPOINT_INTERNAL: ${S3_ENDPOINT_INTERNAL:-https://storage.yandexcloud.net}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-https://storage.yandexcloud.net}
       S3_BUCKET: ${S3_BUCKET:-media}
-      S3_REGION: ${S3_REGION:-us-east-1}
-      S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-true}
+      S3_REGION: ${S3_REGION:-ru-central1}
+      S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE:-false}
       USE_PUBLIC_URLS: ${USE_PUBLIC_URLS:-true}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
@@ -112,5 +91,4 @@ services:
 
 volumes:
   postgres_data:
-  localstack_data:
 

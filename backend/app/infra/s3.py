@@ -1,4 +1,4 @@
-"""S3 infrastructure with LocalStack support and URL rewriting."""
+"""S3 infrastructure with Yandex Cloud / AWS S3 support and URL rewriting."""
 from urllib.parse import urlparse, urlunparse
 
 import boto3
@@ -56,8 +56,7 @@ def rewrite_to_public(url: str) -> str:
     Rewrite S3 URL from internal endpoint to public endpoint.
     
     This allows the backend to generate presigned URLs using the internal
-    endpoint (e.g., http://localstack:4566) but return URLs that work
-    from the browser (e.g., http://localhost:4566).
+    endpoint but return URLs that work from the browser.
     """
     if not url:
         return url
