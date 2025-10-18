@@ -8,14 +8,14 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем зависимости и устанавливаем пакеты
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Копируем зависимости из backend и устанавливаем их
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Копируем весь код приложения
-COPY . .
+# Копируем всё содержимое backend/
+COPY backend/ /app/
 
-# Даём права на запуск start.sh
+# Делаем start.sh исполняемым
 RUN chmod +x /app/start.sh
 
 EXPOSE 8000
