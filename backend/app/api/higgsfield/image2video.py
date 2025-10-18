@@ -5,6 +5,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from app.core.config import settings
+import asyncio
 
 HIGGSFIELD_BASE_URL = "https://platform.higgsfield.ai/v1"
 HF_API_KEY = settings.HIGGSFIELD_API_KEY
@@ -72,11 +73,38 @@ async def generate_image2video(request: Image2VideoRequest):
         raise HTTPException(status_code=400, detail="input_image is required")
 
     async with httpx.AsyncClient() as client:
+        # Initial generation request
         resp = await client.post(
             f"{HIGGSFIELD_BASE_URL}/image2video/{params.model_name}",
             headers=headers,
             json=request.dict(),
         )
-    if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail=resp.text)
-    return resp.json()
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        
+        initial_data = resp.json()
+        job_set_id = initial_data["id"]
+
+        # Poll for results
+        while True:
+            resp = await client.get(f"{HIGGSFIELD_BASE_URL}/job-sets/{job_set_id}", headers=headers)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+            
+            data = resp.json()
+            status = data["jobs"][0]["status"]
+            
+            if status in ["completed", "failed", "nsfw"]:
+                if status == "completed":
+                    return {
+                        "url": data["jobs"][0]["results"]["raw"]["url"]
+                    }
+                else:
+                    return {
+                        "job_set_id": job_set_id,
+                        "status": status,
+                        "error": data["jobs"][0].get("error", "Generation failed")
+                    }
+            
+            # Wait between polls since image2video generation can take time
+            await asyncio.sleep(5)  # 5 second polling interval

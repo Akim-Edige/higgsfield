@@ -65,19 +65,3 @@ async def poll_job_set(job_set_id: str):
                 print("Final result:", data)
                 break
             await asyncio.sleep(10)
-
-@router.post("/generate-and-poll")
-async def generate_and_poll(payload: dict, background_tasks: BackgroundTasks):
-    headers = {
-        "Content-Type": "application/json",
-        "hf-api-key": HF_API_KEY,
-        "hf-secret": HF_SECRET
-    }
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(f"{HIGGSFIELD_BASE_URL}/text2image/soul", headers=headers, json=payload)
-    if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail=resp.text)
-    data = resp.json()
-    job_set_id = data["id"]
-    background_tasks.add_task(poll_job_set, job_set_id)
-    return {"message": "generation started", "job_set_id": job_set_id}
