@@ -17,7 +17,6 @@ class Chat(Base):
     user_id = Column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=True,
         index=True,
     )
     title = Column(Text, nullable=True)
@@ -82,6 +81,7 @@ class Option(Base):
     prompt = Column(Text, nullable=True)
     model = Column(Text, nullable=True)
     style = Column(Text, nullable=True)
+    explanation = Column(Text, nullable=True)  # LLM explanation of why this style was chosen
     # URL храним как текст; валидацию делаем на уровне Pydantic-схемы/роутера
     result_url = Column(Text, nullable=True)
 

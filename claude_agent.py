@@ -232,6 +232,42 @@ Return ONLY the enhanced prompt - no explanations, no meta-commentary, just the 
     return message.content[0].text.strip()
 
 
+async def generate_style_explanation(
+    user_request: str,
+    style_name: str,
+    style_description: str
+) -> str:
+    """
+    Generate explanation why this style was chosen for the user's request
+    """
+    explanation_prompt = f"""You are explaining to a user why you chose a specific style for their image/video request.
+
+User's request: {user_request}
+Style chosen: {style_name}
+Style description: {style_description}
+
+Write a brief, friendly advice about why this style fits their request perfectly. 
+Focus on:
+- How it matches their vision
+- Key visual characteristics that align with their needs
+- What makes this style special for their use case
+
+Be conversational and helpful. Return ONLY the explanation text, no headers or formatting."""
+
+    message = await claude_client.messages.create(
+        model="claude-3-5-haiku-20241022",
+        max_tokens=8192,
+        messages=[
+            {
+                "role": "user",
+                "content": explanation_prompt
+            }
+        ]
+    )
+    
+    return message.content[0].text.strip()
+
+
 async def create_option_in_background(
     message_id: uuid.UUID,
     style_id: str,
@@ -242,26 +278,28 @@ async def create_option_in_background(
     db: Session
 ):
     """
-    Background task for creating Option with enhanced prompt
+    Background task for creating Option with enhanced prompt (explanation will be added later)
     """
     try:
         # Enhance prompt
         enhanced_prompt = await enhance_prompt_with_claude(user_prompt, style_description)
         
-        # Create Option in database
+        # Create Option in database WITHOUT explanation (will be updated later)
         option = Option(
             id=uuid.uuid4(),
             message_id=message_id,
             prompt=enhanced_prompt,
             model=model_type,
             style=style_name,
+            explanation=None,  # Will be filled later
             result_url=None
         )
         
         db.add(option)
         db.commit()
         
-        print(f"✓ Option created: {option.id} with enhanced prompt: {enhanced_prompt[:100]}...")
+        print(f"✓ Option created: {option.id}")
+        print(f"   Enhanced prompt ({len(enhanced_prompt)} chars): {enhanced_prompt}")
         
         return str(option.id)
         
@@ -513,30 +551,74 @@ async def chat_with_claude(
             
             current_round += 1
         
+        # Generate explanations for all options and update database
+        print("\n📝 Generating explanations for all options...")
+        for result in all_tool_results:
+            if "error" not in result and "option_id" in result:
+                option_id = uuid.UUID(result['option_id'])  # Convert string to UUID
+                
+                # Get style/motion info
+                if result['model'] == 'text-to-image':
+                    style_name = result['style']
+                    style_description = result.get('style_description', '')
+                else:
+                    style_name = result['motion']
+                    style_description = result.get('motion_description', '')
+                
+                # Generate explanation
+                explanation = await generate_style_explanation(
+                    user_message,  # Original user request
+                    style_name,
+                    style_description
+                )
+                
+                # Update Option in database with explanation
+                option = db.query(Option).filter_by(id=option_id).first()
+                if option:
+                    option.explanation = explanation
+                    db.commit()
+                    print(f"✓ Added explanation for {style_name}: {explanation[:100]}...")
+                
+                # Add explanation to result for JSON output
+                result['explanation'] = explanation
+        
         # Format the response with IDs
         formatted_response = initial_response
         
-        # Add all tool results to the response
+        # Add all tool results to the response in JSON format
         if all_tool_results:
-            formatted_response += "\n\n---\n**Generated Options:**\n"
-            for i, result in enumerate(all_tool_results, 1):
+            formatted_response += "\n\n---\n**Generated Options:**\n\n```json\n"
+            
+            # Create JSON structure
+            options_json = []
+            for result in all_tool_results:
                 if "error" not in result:
                     if result['model'] == 'text-to-image':
-                        formatted_response += f"\n{i}. Style: **{result['style']}**\n"
-                        formatted_response += f"   - Style ID: `{result['style_id']}`\n"
-                        formatted_response += f"   - Option ID: `{result['option_id']}`\n"
-                        formatted_response += f"   - Message ID: `{result['message_id']}`\n"
-                        formatted_response += f"   - Model: {result['model']}\n"
+                        options_json.append({
+                            "style": result['style'],
+                            "style_id": result['style_id'],
+                            "option_id": result['option_id'],
+                            "message_id": result['message_id'],
+                            "model": result['model'],
+                            "explanation": result.get('explanation', '')
+                        })
                     else:
-                        formatted_response += f"\n{i}. Motion: **{result['motion']}**\n"
-                        formatted_response += f"   - Motion ID: `{result['motion_id']}`\n"
-                        formatted_response += f"   - Option ID: `{result['option_id']}`\n"
-                        formatted_response += f"   - Message ID: `{result['message_id']}`\n"
-                        formatted_response += f"   - Model: {result['model']}\n"
+                        options_json.append({
+                            "motion": result['motion'],
+                            "motion_id": result['motion_id'],
+                            "option_id": result['option_id'],
+                            "message_id": result['message_id'],
+                            "model": result['model'],
+                            "explanation": result.get('explanation', '')
+                        })
+            
+            # Format as pretty JSON
+            formatted_response += json.dumps(options_json, indent=2, ensure_ascii=False)
+            formatted_response += "\n```"
         
         # Add final Claude response if there's any additional text
         if final_text and final_text != initial_response:
-            formatted_response += f"\n{final_text}"
+            formatted_response += f"\n\n{final_text}"
         
         return formatted_response
     
