@@ -4,6 +4,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict
+import asyncio
 
 from app.core.config import settings
 
@@ -57,9 +58,35 @@ async def generate_image(request: Optional[GenerateRequest] = None):
             headers=headers,
             json=request.dict()
         )
-    if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail=resp.text)
-    return resp.json()
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        
+        initial_data = resp.json()
+        job_set_id = initial_data["id"]
+
+        # Poll for results
+        while True:
+            resp = await client.get(f"{HIGGSFIELD_BASE_URL}/job-sets/{job_set_id}", headers=headers)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+            
+            data = resp.json()
+            status = data["jobs"][0]["status"]
+            
+            if status in ["completed", "failed", "nsfw"]:
+                if status == "completed":
+                    return {
+                        "url": data["jobs"][0]["results"]["raw"]["url"],
+                        "preview_url": data["jobs"][0]["results"]["min"]["url"]
+                    }
+                else:
+                    return {
+                        "job_set_id": job_set_id,
+                        "status": status,
+                        "error": data["jobs"][0].get("error", "Generation failed")
+                    }
+                
+            await asyncio.sleep(2)  # Wait 2 seconds before next poll
 
 
 # ============================
