@@ -122,11 +122,9 @@ class Attachment(Base):
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     storage_url: Mapped[str] = mapped_column(Text, nullable=False)
     provider_url: Mapped[Optional[str]] = mapped_column(Text)
-    sha256: Mapped[Optional[str]] = mapped_column(Text, index=True)
     width: Mapped[Optional[int]] = mapped_column(Integer)
     height: Mapped[Optional[int]] = mapped_column(Integer)
     duration_ms: Mapped[Optional[int]] = mapped_column(Integer)
-    blurhash: Mapped[Optional[str]] = mapped_column(Text)
     meta: Mapped[Optional[dict]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=text("now()")
