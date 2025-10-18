@@ -21,6 +21,36 @@ def s3_client_internal():
     )
 
 
+def get_public_url(bucket: str, key: str) -> str:
+    """
+    Generate permanent public URL for an object in a public bucket.
+    
+    For Yandex Cloud Object Storage:
+    - Virtual-hosted style: https://{bucket}.storage.yandexcloud.net/{key}
+    - Path style: https://storage.yandexcloud.net/{bucket}/{key}
+    
+    Args:
+        bucket: S3 bucket name
+        key: Object key
+        
+    Returns:
+        Public URL (no signature, no expiration)
+    """
+    endpoint = settings.S3_PUBLIC_ENDPOINT.rstrip('/')
+    
+    # Parse endpoint to get scheme and host
+    parsed = urlparse(endpoint)
+    
+    if settings.S3_USE_PATH_STYLE:
+        # Path style: https://storage.yandexcloud.net/{bucket}/{key}
+        return f"{endpoint}/{bucket}/{key}"
+    else:
+        # Virtual-hosted style: https://{bucket}.storage.yandexcloud.net/{key}
+        # Replace the host with bucket.host
+        host = parsed.netloc
+        return f"{parsed.scheme}://{bucket}.{host}/{key}"
+
+
 def rewrite_to_public(url: str) -> str:
     """
     Rewrite S3 URL from internal endpoint to public endpoint.

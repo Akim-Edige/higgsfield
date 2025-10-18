@@ -37,18 +37,23 @@ class Settings(BaseSettings):
     I2V_TIMEOUT_S: int = Field(default=1200, description="Image-to-video timeout in seconds")
     T2V_TIMEOUT_S: int = Field(default=1200, description="Text-to-video timeout in seconds")
 
-    # S3 / LocalStack
+    # S3 / LocalStack / Yandex Cloud
     S3_BUCKET: str = Field(default="media", description="S3 bucket name")
-    S3_REGION: str = Field(default="us-east-1", description="S3 region")
-    S3_USE_PATH_STYLE: bool = Field(default=True, description="Use path-style S3 URLs")
+    S3_REGION: str = Field(default="ru-central1", description="S3 region")
+    S3_USE_PATH_STYLE: bool = Field(default=False, description="Use path-style S3 URLs")
     S3_ENDPOINT_INTERNAL: str = Field(
-        default="http://localstack:4566", description="S3 endpoint for backend/worker"
+        default="https://storage.yandexcloud.net", description="S3 endpoint for backend/worker"
     )
     S3_PUBLIC_ENDPOINT: str = Field(
-        default="http://localhost:4566", description="S3 endpoint for browser"
+        default="https://storage.yandexcloud.net", description="S3 endpoint for browser"
     )
-    AWS_ACCESS_KEY_ID: str = Field(default="test", description="AWS access key")
-    AWS_SECRET_ACCESS_KEY: str = Field(default="test", description="AWS secret key")
+    AWS_ACCESS_KEY_ID: str = Field(default="test", description="AWS access key / Yandex static key ID")
+    AWS_SECRET_ACCESS_KEY: str = Field(default="test", description="AWS secret key / Yandex secret key")
+    
+    # Public URLs (simplified for hackathon)
+    USE_PUBLIC_URLS: bool = Field(
+        default=True, description="Use public URLs instead of presigned for downloads"
+    )
 
     # Celery
     CELERY_BROKER_URL: str = Field(default="redis://redis:6379/0", description="Celery broker")

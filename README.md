@@ -399,6 +399,48 @@ aws --endpoint-url http://localhost:4566 s3 ls s3://media --recursive
 aws --endpoint-url http://localhost:4566 s3 cp s3://media/uploads/{uuid}/file.jpg ./file.jpg
 ```
 
+## ☁️ Yandex Cloud Object Storage (Production)
+
+For hackathon or production deployment, you can use **Yandex Cloud Object Storage** instead of LocalStack.
+
+### Quick Setup
+
+1. **Create bucket** at [Yandex Cloud Console](https://console.cloud.yandex.ru/)
+2. **Enable public access** for read (hackathon mode)
+3. **Get static access keys** from service account
+4. **Update `.env`**:
+
+```env
+# Yandex Cloud configuration
+S3_BUCKET=your-bucket-name
+S3_REGION=ru-central1
+S3_USE_PATH_STYLE=false
+S3_ENDPOINT_INTERNAL=https://storage.yandexcloud.net
+S3_PUBLIC_ENDPOINT=https://storage.yandexcloud.net
+AWS_ACCESS_KEY_ID=your_yandex_access_key_id
+AWS_SECRET_ACCESS_KEY=your_yandex_secret_key
+
+# Use public URLs (simplified for hackathon)
+USE_PUBLIC_URLS=true
+```
+
+### Public URLs Mode
+
+When `USE_PUBLIC_URLS=true`:
+- **Upload**: Still uses presigned URLs (required for security)
+- **Download**: Returns permanent public URLs like `https://{bucket}.storage.yandexcloud.net/{key}`
+- **No expiration**: Links work forever
+- **Requires**: Public read access on bucket
+
+This simplifies development and hackathons, but for production consider using `USE_PUBLIC_URLS=false` for private buckets with temporary presigned URLs.
+
+📖 **Full guide**: See [YANDEX_CLOUD_SETUP.md](YANDEX_CLOUD_SETUP.md) for detailed instructions.
+
+### Example Configuration Files
+
+- `env.yandex.example` - Environment variables template for Yandex Cloud
+- `YANDEX_CLOUD_SETUP.md` - Complete setup guide with troubleshooting
+
 ## 📊 Monitoring
 
 ### Prometheus Metrics
@@ -499,21 +541,29 @@ Key variables:
 - `HIGGSFIELD_SECRET`: Your Higgsfield secret
 - `DB_DSN`: PostgreSQL connection string
 - `REDIS_URL`: Redis connection string
+- `S3_BUCKET`: S3 bucket name
+- `S3_REGION`: S3 region (e.g., `us-east-1`, `ru-central1`)
 - `S3_ENDPOINT_INTERNAL`: S3 endpoint for backend/worker
 - `S3_PUBLIC_ENDPOINT`: S3 endpoint for browser
+- `AWS_ACCESS_KEY_ID`: AWS/Yandex access key ID
+- `AWS_SECRET_ACCESS_KEY`: AWS/Yandex secret access key
+- `USE_PUBLIC_URLS`: Use permanent public URLs instead of presigned (default: `true`)
 
 ## 🚀 Production Deployment
 
 For production:
 
-1. **Use AWS S3** instead of LocalStack
+1. **Use cloud storage** instead of LocalStack
+   - **AWS S3** with CloudFront CDN
+   - **Yandex Cloud Object Storage** (see [YANDEX_CLOUD_SETUP.md](YANDEX_CLOUD_SETUP.md))
+   - Set `USE_PUBLIC_URLS=false` for private buckets with presigned URLs
 2. **Set up proper authentication** (JWT/OAuth2)
 3. **Configure CORS** with specific origins
 4. **Enable HTTPS** via reverse proxy (nginx/Caddy)
-5. **Use managed Redis** (AWS ElastiCache, Redis Cloud)
-6. **Use managed PostgreSQL** (AWS RDS, Google Cloud SQL)
+5. **Use managed Redis** (AWS ElastiCache, Redis Cloud, Yandex Managed Service for Redis)
+6. **Use managed PostgreSQL** (AWS RDS, Google Cloud SQL, Yandex Managed Service for PostgreSQL)
 7. **Set up monitoring** (Prometheus + Grafana)
-8. **Configure log aggregation** (ELK, Datadog, CloudWatch)
+8. **Configure log aggregation** (ELK, Datadog, CloudWatch, Yandex Cloud Logging)
 9. **Add rate limiting** and request throttling
 10. **Set up CI/CD** pipeline for automated deployments
 
