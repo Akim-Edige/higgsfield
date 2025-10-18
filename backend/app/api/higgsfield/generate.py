@@ -73,6 +73,7 @@ async def generate(
     style_id = option.style_id
     
     # 2️⃣ Вызываем соответствующий эндпоинт в зависимости от mode
+    result = None
     
     if request.mode == "text-to-image":
         # Формируем запрос для text2image
@@ -90,7 +91,7 @@ async def generate(
                 model_name=request.model_name  # Передаём model_name
             )
         )
-        return await generate_image(t2i_request)
+        result = await generate_image(t2i_request)
     
     elif request.mode == "image-to-video":
         if not request.image_url:
@@ -118,7 +119,7 @@ async def generate(
                 model_name=request.model_name or "veo3"  # Передаём model_name
             )
         )
-        return await generate_image2video(i2v_request)
+        result = await generate_image2video(i2v_request)
     
     elif request.mode == "text-to-video":
         # Формируем запрос для text2video
@@ -132,7 +133,15 @@ async def generate(
                 model_name=request.model_name or "seedance-v1-lite-t2v"  # Передаём model_name
             )
         )
-        return await generate_video(t2v_request)
+        result = await generate_video(t2v_request)
     
     else:
         raise HTTPException(status_code=400, detail=f"Unknown mode: {request.mode}")
+    
+    # 3️⃣ Сохраняем URL результата в Option
+    if result and "url" in result:
+        option.result_url = result["url"]
+        await db.commit()
+        await db.refresh(option)
+    
+    return result
