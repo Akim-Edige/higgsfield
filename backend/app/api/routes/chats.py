@@ -39,7 +39,6 @@ async def list_chats(
     # Keyset pagination by (created_at desc, id desc)
     stmt = select(Chat).where(Chat.user_id == user_id)
 
-    # TODO: Implement cursor decoding and keyset filtering
     # For now, simple limit-based query
     stmt = stmt.order_by(Chat.created_at.desc(), Chat.id.desc()).limit(limit + 1)
 
