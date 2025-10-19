@@ -51,30 +51,31 @@ async def generate_video(request: Optional[GenerateVideoRequest] = None):
 
     # Model-specific parameter handling
     if model_name == "minimax-t2v":
-        params = request_data["params"]
+        # Keep only required parameters for minimax
         cleaned_params = {
-            "prompt": params["prompt"],
-            "duration": 6,
+            "prompt": request_data["params"]["prompt"],
+            "duration": 6,  # Fixed value for minimax
             "enable_prompt_optimizier": True,
-            "resolution": "768"  # Fixed for minimax
+            "resolution": "768"  # Fixed value for minimax
         }
         request_data["params"] = cleaned_params
+        base_url = f"{HIGGSFIELD_BASE_URL}/generate"
     elif model_name == "seedance-v1-lite-t2v":
-        params = request_data["params"]
+        # Keep all required parameters for seedance
         cleaned_params = {
-            "prompt": params["prompt"],
-            "aspect_ratio": params["aspect_ratio"],
-            "duration": params["duration"],
-            "resolution": params["resolution"],
-            "camera_fixed": params["camera_fixed"]
+            "prompt": request_data["params"]["prompt"],
+            "duration": request_data["params"]["duration"],
+            "resolution": request_data["params"]["resolution"],
+            "aspect_ratio": request_data["params"]["aspect_ratio"],
+            "camera_fixed": request_data["params"]["camera_fixed"]
         }
         request_data["params"] = cleaned_params
-
+        base_url = f"{HIGGSFIELD_BASE_URL}/generate"
 
     async with httpx.AsyncClient() as client:
         # Initial generation request
         resp = await client.post(
-            f"{HIGGSFIELD_BASE_URL}/generate/{request.params.model_name}",
+            f"{base_url}/{model_name}",
             headers=headers,
             json=request_data
         )
@@ -105,5 +106,4 @@ async def generate_video(request: Optional[GenerateVideoRequest] = None):
                         "error": data["jobs"][0].get("error", "Generation failed")
                     }
             
-            # Wait longer for video generation since it typically takes more time
-            await asyncio.sleep(5)  # 5 second polling interval for videos
+            await asyncio.sleep(5)
