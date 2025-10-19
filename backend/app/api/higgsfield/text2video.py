@@ -80,12 +80,3 @@ async def generate_video(request: Optional[GenerateVideoRequest] = None):
             # Wait longer for video generation since it typically takes more time
             await asyncio.sleep(5)  # 5 second polling interval for videos
 
-    # async with httpx.AsyncClient() as client:
-    #     resp = await client.post(
-    #         f"{HIGGSFIELD_BASE_URL}/generate/{request.params.model_name}",
-    #         headers=headers,
-    #         json=request.dict()
-    #     )
-    # if resp.status_code != 200:
-    #     raise HTTPException(status_code=resp.status_code, detail=resp.text)
-    # return resp.json()

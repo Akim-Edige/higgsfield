@@ -16,10 +16,3 @@ async def readyz():
     """Readiness check (could check DB, Redis, etc.)."""
     # TODO: Add actual readiness checks
     return {"status": "ready"}
-
-
-@router.get("/metrics")
-async def metrics():
-    """Prometheus metrics endpoint."""
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
-

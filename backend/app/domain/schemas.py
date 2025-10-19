@@ -131,44 +131,6 @@ class OptionOut(BaseModel):
 
 
 # ============================================================================
-# Jobs
-# ============================================================================
-
-
-class JobCreateResponse(BaseModel):
-    """Job creation response."""
-
-    job_id: UUID
-
-
-class JobResult(BaseModel):
-    """Job result schema."""
-
-    min_url: str | None = None
-    raw_url: str | None = None
-    mime: str | None = None
-    size_bytes: int | None = None
-    thumbnails: list[str] = Field(default_factory=list)
-
-
-class ErrorOut(BaseModel):
-    """Error output schema."""
-
-    code: str
-    message: str
-
-
-class JobOut(BaseModel):
-    """Job output schema."""
-
-    job_id: UUID
-    status: str
-    result: JobResult | None = None
-    error: ErrorOut | None = None
-    retry_after_seconds: int = 10
-
-
-# ============================================================================
 # Attachments
 # ============================================================================
 
