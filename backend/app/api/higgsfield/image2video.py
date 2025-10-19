@@ -1,7 +1,7 @@
 # app/api/routes/higgsfield_image2video.py
 import os
 import httpx
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from app.core.config import settings
@@ -23,8 +23,16 @@ router = APIRouter(prefix="/higgsfield/image2video", tags=["higgsfield:image2vid
 # 🔹 Модели
 # ============================
 class ImageReference(BaseModel):
-    type: str = Field("image_url")
-    image_url: str
+    type: str = Field("image_url", description="Type of image reference")
+    image_url: str = Field(..., description="URL of the input image")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "type": "image_url",
+                "image_url": "https://example.com/image.jpg"
+            }
+        }
 
 class MotionRef(BaseModel):
     id: str
@@ -35,33 +43,37 @@ class Webhook(BaseModel):
     secret: Optional[str] = None
 
 class Image2VideoParams(BaseModel):
-    model: Optional[str] = None  # For specific models like "kling-v2-5-turbo"
+    model: Optional[str] = Field(None, description="For specific models like kling-v2-5-turbo")
     prompt: str = "A cinematic portrait of a woman turning her head slightly"
-    prompts: Optional[List[str]] = None  # For seedance
-    seed: Optional[int] = -1  # For wan-25-fast
+    prompts: Optional[List[str]] = None
+    seed: Optional[int] = -1
     duration: int = 5
     resolution: Optional[str] = "720"
     input_image: ImageReference
     enhance_prompt: bool = True
-    model_name: str = "seedance"  # Default model name for endpoint
-    negative_prompt: Optional[str] = ""  # For wan-25-fast
-    input_audio: Optional[dict] = None  # For wan-25-fast
+    model_name: str = "seedance"
+    negative_prompt: Optional[str] = ""
+    input_audio: Optional[dict] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "model_name": "seedance",
+                "prompt": "A cinematic portrait",
+                "duration": 5,
+                "resolution": "720",
+                "input_image": {
+                    "type": "image_url",
+                    "image_url": "https://example.com/image.jpg"
+                },
+                "enhance_prompt": True
+            }
+        }
 
 class Image2VideoRequest(BaseModel):
     webhook: Optional[Webhook] = None
     params: Image2VideoParams
 
-# ============================
-# 🔹 Загрузка изображений
-# ============================
-@router.post("/upload")
-async def upload_image(file: UploadFile = File(...)):
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image files are allowed")
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
-    return {"url": f"http://127.0.0.1:8000/uploads/{file.filename}"}
 
 # ============================
 # 🔹 Генерация видео
@@ -154,11 +166,7 @@ async def generate_image2video(request: Image2VideoRequest):
                         "url": data["jobs"][0]["results"]["raw"]["url"]
                     }
                 else:
-                    return {
-                        "job_set_id": job_set_id,
-                        "status": status,
-                        "error": data["jobs"][0].get("error", "Generation failed")
-                    }
+                    return data
             
             # Wait between polls since image2video generation can take time
             await asyncio.sleep(5)  # 5 second polling interval
