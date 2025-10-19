@@ -1,58 +1,71 @@
 # Higgsfield Backend API
 
 Production-ready chat-based assistant backend with Higgsfield generation integration. This system provides a robust API for managing chats, generating media (images/videos) via Higgsfield's models, and handling async job polling with proper idempotency and reliability guarantees.
+## Architecture
 
-## 🏗️ Architecture
+graph TD
+    Client[Browser/Client] -->|HTTP| API[FastAPI Backend]
+    
+    subgraph Backend
+        API --> Routes[API Routes]
+        Routes -->|Image Gen| HF_IMG[Text2Image Service]
+        Routes -->|Video Gen| HF_VID[Text2Video Service]
+        Routes -->|Image2Vid| HF_I2V[Image2Video Service]
+        
+        HF_IMG --> HF[Higgsfield AI Platform]
+        HF_VID --> HF
+        HF_I2V --> HF
+        
+        Routes -->|Chat/Messages| DB[(PostgreSQL)]
+        Routes -->|File Upload| S3[S3 Storage]
+        
+        subgraph Services
+            HF_IMG
+            HF_VID
+            HF_I2V
+            Chat[Chat Service]
+            Claude[Claude Recommender]
+        end
+        
+        Routes --> Chat
+        Chat --> Claude
+        Claude --> DB
+    end
+    
+    subgraph "Async Operations"
+        HF -->|Job Status| Polling[Status Polling]
+        Polling -->|Updates| Routes
+    end
+    
+    subgraph "Storage Layer"
+        DB
+        S3
+    end
 
-```
-┌─────────────┐
-│   Frontend  │
-│   (Browser) │
-└──────┬──────┘
-       │ HTTP/SSE
-       ▼
-┌─────────────────────────────────────────────┐
-│            FastAPI Backend (API)             │
-│  ┌────────────┐  ┌──────────────┐          │
-│  │   Routes   │  │   Services   │          │
-│  │  (REST)    │──│ (Business    │          │
-│  │            │  │  Logic)      │          │
-│  └────────────┘  └──────┬───────┘          │
-│                         │                   │
-│  ┌─────────────────────┴────────────────┐  │
-│  │    PostgreSQL (Async SQLAlchemy)     │  │
-│  └──────────────────────────────────────┘  │
-└───────────────┬─────────────────────────────┘
-                │
-                │ Celery Tasks
-                ▼
-┌───────────────────────────────────────────┐
-│        Celery Worker (Background)         │
-│  ┌──────────────────────────────────┐    │
-│  │     Polling Task (Exponential    │    │
-│  │     Backoff + Jitter)            │    │
-│  └──────────┬───────────────────────┘    │
-│             │                             │
-│             ▼                             │
-│    ┌────────────────────┐                │
-│    │  Higgsfield API    │                │
-│    │  (Provider)        │                │
-│    └────────────────────┘                │
-└───────────────────────────────────────────┘
-       │
-       │ S3 Operations
-       ▼
-┌────────────────────────┐
-│  LocalStack (S3)       │
-│  - Development S3      │
-│  - CORS configured     │
-│  - Public URL rewrite  │
-└────────────────────────┘
 
-Supporting Services:
-- Redis (Celery broker + SSE pub/sub)
-- PostgreSQL (Primary data store)
-```
+## 🚀 Features
+
+- Text to Image generation
+- Text to Video generation
+- Image to Video transformation
+- Multiple AI model support:
+  - Seedance
+  - Minimax
+  - Kling
+  - Wan-25
+  - Nano Banana
+  - Seedream
+
+## 🛠 Tech Stack
+
+- FastAPI
+- SQLAlchemy (async)
+- Alembic
+- Python 3.12+
+- Docker
+- PostgreSQL
+
+
 
 ## 🚀 Quick Start
 
@@ -94,8 +107,6 @@ curl http://localhost:8000/healthz
 # View API docs
 open http://localhost:8000/docs
 
-# Check metrics
-curl http://localhost:8000/metrics
 ```
 
 ### 4. Stop Services
@@ -104,63 +115,49 @@ curl http://localhost:8000/metrics
 make dev-down
 ```
 
+
 ## 📦 Project Structure
 
 ```
 backend/
 ├── alembic/                    # Database migrations
-│   ├── versions/
-│   │   └── 001_initial_schema.py
-│   └── env.py
+│   └── versions/               # Migration versions
 ├── app/
 │   ├── api/
+│   │   ├── higgsfield/        # Higgsfield AI Integration
+│   │   │   ├── text2image.py  # Image generation
+│   │   │   ├── text2video.py  # Video generation
+│   │   │   ├── image2video.py # Image to video conversion
+│   │   │   ├── generate.py    # Universal generation
+│   │   │   └── misc.py        # Utilities
 │   │   ├── routes/
-│   │   │   ├── chats.py        # Chat CRUD
-│   │   │   ├── messages.py     # Messages + option generation
-│   │   │   ├── options.py      # List options
-│   │   │   ├── jobs.py         # Job creation + polling
-│   │   │   ├── attachments.py  # S3 presigned URLs
-│   │   │   ├── sse.py          # Server-Sent Events
-│   │   │   └── health.py       # Health checks + metrics
-│   │   ├── deps.py             # FastAPI dependencies
-│   │   └── errors.py           # Error handling
+│   │   │   ├── chats.py       # Chat CRUD
+│   │   │   ├── messages.py    # Message handling
+│   │   │   ├── options.py     # Options management
+│   │   │   ├── attachments.py # File attachments
+│   │   │   └── health.py      # Health checks
+│   │   ├── deps.py            # FastAPI dependencies
+│   │   └── errors.py          # Error handling
 │   ├── core/
-│   │   ├── config.py           # Settings (pydantic-settings)
-│   │   ├── logging.py          # Structured logging (structlog)
-│   │   └── security.py         # Auth stubs
+│   │   ├── config.py          # Environment configuration
+│   │   ├── logging.py         # Logging setup
+│   │   └── security.py        # Authentication
 │   ├── domain/
-│   │   ├── models.py           # SQLAlchemy models
-│   │   ├── schemas.py          # Pydantic schemas
-│   │   ├── states.py           # Enums (JobStatus, etc.)
-│   │   └── pagination.py       # Keyset pagination utils
+│   │   ├── models.py          # Database models
+│   │   ├── schemas.py         # API schemas
+│   │   ├── states.py          # System states
+│   │   └── pagination.py      # Pagination utils
 │   ├── services/
-│   │   ├── chat_service.py     # Chat operations
-│   │   ├── recommender.py      # Option recommendation
-│   │   ├── prompt_enhance.py   # Prompt enhancement
-│   │   ├── model_catalog.py    # Model metadata
-│   │   ├── orchestrator.py     # Job lifecycle
-│   │   ├── provider_higgsfield.py  # Provider adapter
-│   │   ├── attachments.py      # S3 presigned URL generation
-│   │   └── sse_broker.py       # In-memory SSE pub/sub
-│   ├── workers/
-│   │   ├── celery_app.py       # Celery configuration
-│   │   └── tasks.py            # Background tasks (polling)
+│   │   ├── chat_service.py    # Chat logic
+│   │   ├── claude_recommender.py # AI recommendations
+│   │   ├── response_parser.py # Response handling
+│   │   └── attachments.py     # File handling
 │   ├── infra/
-│   │   ├── db.py               # Async DB session
-│   │   ├── redis.py            # Redis client
-│   │   ├── s3.py               # S3 client + URL rewrite
-│   │   ├── metrics.py          # Prometheus metrics
-│   │   └── idempotency.py      # Idempotency key validation
-│   └── main.py                 # FastAPI app
-tests/
-├── conftest.py
-├── test_api_messages.py
-├── test_api_generate.py
-├── test_poller.py
-├── test_presign_localstack.py
-└── fixtures/
-    ├── jobset_completed.json
-    └── jobset_failed.json
+│   │   ├── db.py             # Database connection
+│   │   └── s3.py             # S3 storage
+│   ├── image_styles.json     # Image style configs
+│   ├── motions.json         # Video motion configs
+│   └── main.py              # Application entry
 ```
 
 ## 🔑 Key Features
