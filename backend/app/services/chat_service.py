@@ -34,6 +34,7 @@ class ChatService:
         author_type: str,
         content_text: str | None = None,
         render_payload: list | None = None,
+        created_at: datetime | None = None,
     ) -> Message:
         """Create a new message."""
         message = Message(
@@ -42,6 +43,7 @@ class ChatService:
             author_type=author_type,
             content_text=content_text,
             render_payload=render_payload,
+            created_at=created_at or datetime.utcnow(),
         )
         db.add(message)
 
