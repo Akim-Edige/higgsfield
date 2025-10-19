@@ -35,15 +35,17 @@ class Webhook(BaseModel):
     secret: Optional[str] = None
 
 class Image2VideoParams(BaseModel):
-    model: str = "veo-3-fast"
+    model: Optional[str] = None  # For specific models like "kling-v2-5-turbo"
     prompt: str = "A cinematic portrait of a woman turning her head slightly"
-    seed: Optional[int] = 500000
-    motions: Optional[List[MotionRef]] = None
+    prompts: Optional[List[str]] = None  # For seedance
+    seed: Optional[int] = -1  # For wan-25-fast
+    duration: int = 5
+    resolution: Optional[str] = "720"
     input_image: ImageReference
     enhance_prompt: bool = True
-    model_name: Optional[str] = "veo3"  # Название модели для эндпоинта
-    duration: int = 5
-    resolution: Optional[str] = "720" 
+    model_name: str = "seedance"  # Default model name for endpoint
+    negative_prompt: Optional[str] = ""  # For wan-25-fast
+    input_audio: Optional[dict] = None  # For wan-25-fast
 
 class Image2VideoRequest(BaseModel):
     webhook: Optional[Webhook] = None
@@ -82,15 +84,47 @@ async def generate_image2video(request: Image2VideoRequest):
     # Define base URLs and endpoints based on model
     if model_name in ["kling-2-5", "wan-25-fast"]:
         base_url = f"{HIGGSFIELD_BASE_URL2}/generate/{model_name}"
-    elif model_name in ["seedance", "minimax"]:
-        base_url = f"{HIGGSFIELD_BASE_URL}/image2video/{model_name}"
+        
+        if model_name == "kling-2-5":
+            cleaned_params = {
+                "model": "kling-v2-5-turbo",
+                "prompt": params.prompt,
+                "duration": params.duration,
+                "input_image": params.input_image.dict(),
+                "enhance_prompt": params.enhance_prompt
+            }
+        else:  # wan-25-fast
+            cleaned_params = {
+                "seed": params.seed,
+                "prompt": params.prompt,
+                "duration": params.duration,
+                "resolution": "720p",
+                "input_audio": None,
+                "input_image": params.input_image.dict(),
+                "enhance_prompt": False,
+                "negative_prompt": params.negative_prompt or ""
+            }
+    elif model_name == "minimax":
+        base_url = f"{HIGGSFIELD_BASE_URL}/image2video/minimax"
+        cleaned_params = {
+            "prompt": params.prompt,
+            "duration": 6,
+            "resolution": "768",
+            "enhance_prompt": True,
+            "input_image": params.input_image.dict()
+        }
+    elif model_name == "seedance":
+        base_url = f"{HIGGSFIELD_BASE_URL}/image2video/seedance"
+        cleaned_params = {
+            "model": "seedance_pro",
+            "prompts": [params.prompt] if params.prompt else [],
+            "duration": params.duration,
+            "resolution": params.resolution,
+            "input_image": params.input_image.dict(),
+            "enhance_prompt": params.enhance_prompt
+        }
 
-    if model_name == "seedance":
-        if params.prompt and not params.prompts:
-            request_data["params"]["prompts"] = [params.prompt]
-    elif model_name in ["kling-2-5", "wan-25-fast"]:
-        if params.resolution == "720":
-            request_data["params"]["resolution"] = "720p"
+    request_data["params"] = cleaned_params
 
     async with httpx.AsyncClient() as client:
         # Initial generation request
