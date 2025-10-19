@@ -110,33 +110,40 @@ async def generate_image2video(request: Image2VideoRequest):
                 "seed": params.seed,
                 "prompt": params.prompt,
                 "duration": params.duration,
-                "resolution": "720p",
+                "resolution": "720p",  # Must be "720p" not "720"
                 "input_audio": None,
                 "input_image": params.input_image.dict(),
-                "enhance_prompt": False,
-                "negative_prompt": params.negative_prompt or ""
+                "enhance_prompt": False,  # Must be False for wan-25-fast
+                "negative_prompt": ""  # Empty string by default
             }
+
     elif model_name == "minimax":
         base_url = f"{HIGGSFIELD_BASE_URL}/image2video/minimax"
         cleaned_params = {
             "prompt": params.prompt,
-            "duration": 6,
+            "duration": 6,  # Must be 6
             "resolution": "768",
-            "enhance_prompt": True,
-            "input_image": params.input_image.dict()
+            "input_image": params.input_image.dict(),
+            "input_image_end": params.input_image.dict(),  # Required by minimax
+            "enhance_prompt": True
         }
+
     elif model_name == "seedance":
         base_url = f"{HIGGSFIELD_BASE_URL}/image2video/seedance"
         cleaned_params = {
             "model": "seedance_pro",
-            "prompts": [params.prompt] if params.prompt else [],
+            "prompts": [params.prompt],  # Must be array
             "duration": params.duration,
-            "resolution": params.resolution,
+            "resolution": "1080",  # Using 1080 as default for seedance
             "input_image": params.input_image.dict(),
             "enhance_prompt": params.enhance_prompt
         }
 
-    request_data["params"] = cleaned_params
+    # Construct final request payload
+    request_data = {
+        "webhook": request.webhook.dict() if request.webhook else None,
+        "params": cleaned_params
+    }
 
     async with httpx.AsyncClient() as client:
         # Initial generation request
