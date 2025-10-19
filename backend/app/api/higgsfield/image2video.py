@@ -46,7 +46,7 @@ class Image2VideoParams(BaseModel):
     model: Optional[str] = Field(None, description="For specific models like kling-v2-5-turbo")
     prompt: str = "A cinematic portrait of a woman turning her head slightly"
     prompts: Optional[List[str]] = None
-    seed: Optional[int] = -1
+    seed: Optional[int] = 1
     duration: int = 5
     resolution: Optional[str] = "720"
     input_image: ImageReference
@@ -99,11 +99,13 @@ async def generate_image2video(request: Image2VideoRequest):
         
         if model_name == "kling-2-5":
             cleaned_params = {
-                "model": "kling-v2-5-turbo",
-                "prompt": params.prompt,
-                "duration": params.duration,
-                "input_image": params.input_image.dict(),
-                "enhance_prompt": params.enhance_prompt
+                "params": {  # Wrap in params object
+                    "model": "kling-v2-5-turbo",
+                    "prompt": params.prompt,
+                    "duration": params.duration,
+                    "input_image": params.input_image.dict(),
+                    "enhance_prompt": params.enhance_prompt
+                }
             }
         else:  # wan-25-fast
             cleaned_params = {
