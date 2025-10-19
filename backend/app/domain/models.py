@@ -119,9 +119,12 @@ class Attachment(Base):
     )
     kind: Mapped[str] = mapped_column(String, nullable=False)  # 'image', 'video', 'other'
     mime: Mapped[str] = mapped_column(Text, nullable=False)
-    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=True)
     storage_url: Mapped[str] = mapped_column(Text, nullable=False)
     provider_url: Mapped[Optional[str]] = mapped_column(Text)
+    option_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("options.id"), nullable=True, index=True
+    )
     width: Mapped[Optional[int]] = mapped_column(Integer)
     height: Mapped[Optional[int]] = mapped_column(Integer)
     duration_ms: Mapped[Optional[int]] = mapped_column(Integer)

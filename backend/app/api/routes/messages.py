@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
@@ -13,6 +14,7 @@ from app.core.logging import get_logger
 from app.domain.models import Chat, Message, Option
 from app.domain.pagination import encode_cursor
 from app.domain.schemas import (
+    AttachmentOut,
     ButtonChunk,
     MessageCreate,
     MessageOut,
@@ -46,14 +48,18 @@ async def list_messages(
         raise HTTPException(status_code=404, detail="Chat not found")
 
     # Keyset pagination by (created_at desc, id desc)
-    stmt = select(Message).where(Message.chat_id == chat_id)
+    stmt = (
+        select(Message)
+        .where(Message.chat_id == chat_id)
+        .options(selectinload(Message.attachments))
+    )
 
     # TODO: Implement cursor decoding and keyset filtering
     # For now, simple limit-based query
     stmt = stmt.order_by(Message.created_at.desc(), Message.id.desc()).limit(limit + 1)
 
     result = await db.execute(stmt)
-    messages = result.scalars().all()
+    messages = result.scalars().unique().all()
     
     logger.info(
         "list_messages_query",
@@ -70,8 +76,17 @@ async def list_messages(
         last = items[-1]
         next_cursor = encode_cursor({"created_at": last.created_at, "id": str(last.id)})
 
+    # Map attachments into schema
+    items_out: list[MessageOut] = []
+    for m in items:
+        msg = MessageOut.model_validate(m)
+        msg.attachments = [
+            AttachmentOut.model_validate(a) for a in getattr(m, "attachments", [])
+        ]
+        items_out.append(msg)
+
     return PaginatedResponse(
-        items=[MessageOut.model_validate(m) for m in items],
+        items=items_out,
         next_cursor=next_cursor,
         has_more=has_more,
     )
@@ -94,14 +109,25 @@ async def create_message(
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    # Create user message (if text provided)
+    # Create user message if text or attachments are provided
     user_msg = None
-    if data.text:
+    if data.text or (data.attachments and len(data.attachments) > 0):
         user_msg = await ChatService.create_message(
             db, chat_id, AuthorType.USER.value, content_text=data.text
         )
         await db.flush()
         logger.info("user_message_created", message_id=str(user_msg.id), chat_id=str(chat_id))
+
+        # If there are attachment URLs, create attachment rows
+        if data.attachments:
+            for url in data.attachments:
+                await ChatService.create_attachment(
+                    db,
+                    user_id=user_id,
+                    chat_id=chat_id,
+                    message_id=user_msg.id,
+                    storage_url=url,
+                )
 
     # Create assistant message first (will be updated with render_payload)
     # Ensure assistant message is slightly later to avoid identical timestamps

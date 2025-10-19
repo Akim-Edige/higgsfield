@@ -10,7 +10,8 @@ from sqlalchemy import select
 import uuid
 
 from app.infra.db import get_db
-from app.domain.models import Option, Message
+from app.domain.models import Option, Message, Attachment, Chat
+from app.services.chat_service import ChatService
 
 # Импортируем существующие эндпоинты
 from .text2image import generate_image, GenerateRequest as T2IRequest, Params as T2IParams
@@ -143,9 +144,36 @@ async def generate(
     else:
         raise HTTPException(status_code=400, detail=f"Unknown mode: {request.mode}")
     
-    # 3️⃣ Сохраняем URL результата в Option
+    # 3️⃣ Сохраняем URL результата в Option и создаём Attachment на ассистентское сообщение
     if result and "url" in result:
         option.result_url = result["url"]
+        await db.flush()
+
+        # Найдём ассистентское сообщение и user_id через join (без lazy-load)
+        row = await db.execute(
+            select(Message.id, Message.chat_id, Chat.user_id)
+            .join(Chat, Chat.id == Message.chat_id)
+            .where(Message.id == option.message_id)
+        )
+        data = row.first()
+        if data:
+            msg_id, chat_id, user_id = data
+            await ChatService.create_attachment(
+                db,
+                user_id=user_id,
+                chat_id=chat_id,
+                message_id=msg_id,
+                storage_url=option.result_url,
+                option_id=option.id,
+                mime=(
+                    "image/jpeg"
+                    if result["url"].lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+                    else "video/mp4"
+                    if result["url"].lower().endswith((".mp4", ".mov", ".webm"))
+                    else "application/octet-stream"
+                ),
+            )
+
         await db.commit()
         await db.refresh(option)
     
