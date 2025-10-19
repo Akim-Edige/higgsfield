@@ -7,7 +7,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.models import Chat, Message
+from app.domain.models import Chat, Message, Attachment
+from app.domain.states import AttachmentKind
 from app.domain.states import AuthorType
 
 
@@ -57,4 +58,63 @@ class ChatService:
 
         await db.flush()
         return message
+
+    @staticmethod
+    async def create_attachment(
+        db: AsyncSession,
+        *,
+        user_id: uuid.UUID,
+        chat_id: uuid.UUID,
+        message_id: uuid.UUID | None,
+        storage_url: str,
+        option_id: uuid.UUID | None = None,
+        kind: str | None = None,
+        mime: str | None = None,
+        size_bytes: int | None = None,
+        width: int | None = None,
+        height: int | None = None,
+        duration_ms: int | None = None,
+        provider_url: str | None = None,
+        meta: dict | None = None,
+    ) -> Attachment:
+        """Create an attachment row for a message/chat.
+
+        The frontend currently sends a list of URLs; we'll infer kind from MIME if provided,
+        otherwise default to image when URL looks like an image, else other.
+        """
+        detected_kind = kind
+        if detected_kind is None:
+            if mime and mime.startswith("image/"):
+                detected_kind = AttachmentKind.IMAGE.value
+            elif mime and mime.startswith("video/"):
+                detected_kind = AttachmentKind.VIDEO.value
+            else:
+                # naive inference from URL
+                lower = storage_url.lower()
+                if lower.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+                    detected_kind = AttachmentKind.IMAGE.value
+                elif lower.endswith((".mp4", ".mov", ".webm", ".mkv")):
+                    detected_kind = AttachmentKind.VIDEO.value
+                else:
+                    detected_kind = AttachmentKind.OTHER.value
+
+        attachment = Attachment(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            chat_id=chat_id,
+            message_id=message_id,
+            kind=detected_kind,
+            mime=mime or "application/octet-stream",
+            size_bytes=size_bytes or 0,
+            storage_url=storage_url,
+            option_id=option_id,
+            provider_url=provider_url,
+            width=width,
+            height=height,
+            duration_ms=duration_ms,
+            meta=meta or {},
+        )
+        db.add(attachment)
+        await db.flush()
+        return attachment
 

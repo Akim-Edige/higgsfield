@@ -84,7 +84,7 @@ class MessageCreate(BaseModel):
     """Message creation schema."""
 
     text: str | None = None
-    attachments: list[UUID] | None = Field(default_factory=list)
+    attachments: list[str] | None = Field(default_factory=list)
 
 
 class MessageOut(BaseModel):
@@ -96,6 +96,7 @@ class MessageOut(BaseModel):
     content_text: str | None
     render_payload: list[dict[str, Any]] | None
     created_at: datetime
+    attachments: list["AttachmentOut"] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -196,10 +197,11 @@ class AttachmentOut(BaseModel):
     mime: str
     size_bytes: int
     storage_url: str
+    option_id: UUID | None = None
     width: int | None
     height: int | None
     duration_ms: int | None
-    blurhash: str | None
+    blurhash: str | None = None
     created_at: datetime
 
     class Config:
