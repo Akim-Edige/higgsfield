@@ -176,7 +176,18 @@ async def create_message(
         assistant_msg_id=str(assistant_msg.id)
     )
 
+    # Build response without triggering lazy relationship loads
+    message_dict = {
+        "id": assistant_msg.id,
+        "chat_id": assistant_msg.chat_id,
+        "author_type": assistant_msg.author_type,
+        "content_text": assistant_msg.content_text,
+        "render_payload": assistant_msg.render_payload,
+        "created_at": assistant_msg.created_at,
+        "attachments": [],
+    }
+
     return MessageWithOptions(
-        message=MessageOut.model_validate(assistant_msg)
+        message=MessageOut.model_validate(message_dict)
     )
 
