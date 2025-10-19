@@ -54,22 +54,22 @@ async def generate_image(request: Optional[GenerateRequest] = None):
     request_data = request.dict()
     model_name = request.params.model_name.lower()
 
+    # Model-specific parameter handling
     if model_name == "seedream":
-        # Remove unused parameters
-        params = request_data["params"]
-        params.pop("style_id", None)
-        params.pop("style_strength", None)
-        params.pop("width_and_height", None)
-        params.pop("batch_size", None)
-        
-        # Set required parameters
-        params["quality"] = "high"
-
+        # Remove unused parameters and set required ones
         cleaned_params = {
-            "prompt": params["prompt"],
-            "quality": params["quality"],
-            "aspect_ratio": params["aspect_ratio"],
-            "input_images": params["input_images"]
+            "prompt": request_data["params"]["prompt"],
+            "quality": "high",  # Always "high" for seedream
+            "aspect_ratio": request_data["params"]["aspect_ratio"],
+            "input_images": request_data["params"]["input_images"]
+        }
+        request_data["params"] = cleaned_params
+    elif model_name == "nano-banana":
+        # Keep only required parameters
+        cleaned_params = {
+            "prompt": request_data["params"]["prompt"],
+            "aspect_ratio": request_data["params"]["aspect_ratio"],
+            "input_images": request_data["params"]["input_images"]
         }
         request_data["params"] = cleaned_params
 
