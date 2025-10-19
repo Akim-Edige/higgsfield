@@ -8,6 +8,8 @@ from app.core.config import settings
 import asyncio
 
 HIGGSFIELD_BASE_URL = "https://platform.higgsfield.ai/v1"
+HIGGSFIELD_BASE_URL2 = "https://platform.higgsfield.ai"
+
 HF_API_KEY = settings.HIGGSFIELD_API_KEY
 
 HF_SECRET =  settings.HIGGSFIELD_SECRET
@@ -40,6 +42,8 @@ class Image2VideoParams(BaseModel):
     input_image: ImageReference
     enhance_prompt: bool = True
     model_name: Optional[str] = "veo3"  # Название модели для эндпоинта
+    duration: int = 5
+    resolution: Optional[str] = "720" 
 
 class Image2VideoRequest(BaseModel):
     webhook: Optional[Webhook] = None
@@ -71,17 +75,33 @@ async def generate_image2video(request: Image2VideoRequest):
 
     if not params.input_image or not params.input_image.image_url:
         raise HTTPException(status_code=400, detail="input_image is required")
+    
+    request_data = request.dict()
+    model_name = params.model_name.lower()
+    
+    # Define base URLs and endpoints based on model
+    if model_name in ["kling-2-5", "wan-25-fast"]:
+        base_url = f"{HIGGSFIELD_BASE_URL2}/generate/{model_name}"
+    elif model_name in ["seedance", "minimax"]:
+        base_url = f"{HIGGSFIELD_BASE_URL}/image2video/{model_name}"
+
+    if model_name == "seedance":
+        if params.prompt and not params.prompts:
+            request_data["params"]["prompts"] = [params.prompt]
+    elif model_name in ["kling-2-5", "wan-25-fast"]:
+        if params.resolution == "720":
+            request_data["params"]["resolution"] = "720p"
 
     async with httpx.AsyncClient() as client:
         # Initial generation request
         resp = await client.post(
-            f"{HIGGSFIELD_BASE_URL}/image2video/{params.model_name}",
+            base_url,
             headers=headers,
-            json=request.dict(),
+            json=request_data
         )
         if resp.status_code != 200:
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
-        
+
         initial_data = resp.json()
         job_set_id = initial_data["id"]
 

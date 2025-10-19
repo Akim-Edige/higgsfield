@@ -24,6 +24,7 @@ class VideoParams(BaseModel):
     resolution: str = "720"
     camera_fixed: bool = False
     model_name: Optional[str] = "seedance-v1-lite-t2v"  # Название модели
+    enable_prompt_optimizier: Optional[bool] = None  # For minimax-t2v
 
 class GenerateVideoRequest(BaseModel):
     params: VideoParams = VideoParams()
@@ -43,12 +44,39 @@ async def generate_video(request: Optional[GenerateVideoRequest] = None):
         "hf-secret": HF_SECRET
     }
 
+
+    # Prepare request data based on model
+    request_data = request.dict()
+    model_name = request.params.model_name.lower()
+
+    # Model-specific parameter handling
+    if model_name == "minimax-t2v":
+        params = request_data["params"]
+        cleaned_params = {
+            "prompt": params["prompt"],
+            "duration": 6,
+            "enable_prompt_optimizier": True,
+            "resolution": "768"  # Fixed for minimax
+        }
+        request_data["params"] = cleaned_params
+    elif model_name == "seedance-v1-lite-t2v":
+        params = request_data["params"]
+        cleaned_params = {
+            "prompt": params["prompt"],
+            "aspect_ratio": params["aspect_ratio"],
+            "duration": params["duration"],
+            "resolution": params["resolution"],
+            "camera_fixed": params["camera_fixed"]
+        }
+        request_data["params"] = cleaned_params
+
+
     async with httpx.AsyncClient() as client:
         # Initial generation request
         resp = await client.post(
             f"{HIGGSFIELD_BASE_URL}/generate/{request.params.model_name}",
             headers=headers,
-            json=request.dict()
+            json=request_data
         )
         if resp.status_code != 200:
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
@@ -79,4 +107,3 @@ async def generate_video(request: Optional[GenerateVideoRequest] = None):
             
             # Wait longer for video generation since it typically takes more time
             await asyncio.sleep(5)  # 5 second polling interval for videos
-
