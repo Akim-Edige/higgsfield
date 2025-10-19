@@ -10,7 +10,7 @@ from sqlalchemy import select
 import uuid
 
 from app.infra.db import get_db
-from app.domain.models import Option
+from app.domain.models import Option, Message
 
 # Импортируем существующие эндпоинты
 from .text2image import generate_image, GenerateRequest as T2IRequest, Params as T2IParams
@@ -68,6 +68,11 @@ async def generate(
     
     if not option:
         raise HTTPException(status_code=404, detail=f"Option {request.option_id} not found")
+    
+    if option.result_url:
+        return {
+            "url": option.result_url
+        }
     
     enhanced_prompt = option.enhanced_prompt
     style_id = option.style_id
