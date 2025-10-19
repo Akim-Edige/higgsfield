@@ -51,12 +51,33 @@ async def generate_image(request: Optional[GenerateRequest] = None):
         "hf-api-key": HF_API_KEY,
         "hf-secret": HF_SECRET
     }
+    request_data = request.dict()
+    model_name = request.params.model_name.lower()
+
+    if model_name == "seedream":
+        # Remove unused parameters
+        params = request_data["params"]
+        params.pop("style_id", None)
+        params.pop("style_strength", None)
+        params.pop("width_and_height", None)
+        params.pop("batch_size", None)
+        
+        # Set required parameters
+        params["quality"] = "high"
+
+        cleaned_params = {
+            "prompt": params["prompt"],
+            "quality": params["quality"],
+            "aspect_ratio": params["aspect_ratio"],
+            "input_images": params["input_images"]
+        }
+        request_data["params"] = cleaned_params
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             f"{HIGGSFIELD_BASE_URL}/text2image/{request.params.model_name}",
             headers=headers,
-            json=request.dict()
+            json=request_data
         )
         if resp.status_code != 200:
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
